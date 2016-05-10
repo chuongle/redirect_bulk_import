@@ -1,0 +1,7 @@
+name: Redirect Bulk Import
+type: module
+description: Custom module to handle bulk redirect import.
+core: 8.x
+package: Custom
+dependencies:
+  - redirect

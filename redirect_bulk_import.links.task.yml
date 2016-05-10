@@ -1,0 +1,5 @@
+redirect_bulk_import.redirect_bulk_import_form:
+  route_name: redirect_bulk_import.redirect_bulk_import_form
+  base_route: redirect.list
+  title: Redirect Import
+  weight: 50

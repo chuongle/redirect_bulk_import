@@ -1,0 +1,119 @@
+<?php
+
+/**
+ * @file
+ * Contains redirect_bulk_import.module..
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\redirect\Entity\Redirect;
+
+// strip first slash
+// prefix internal:/
+
+
+
+/**
+ * Implements hook_help().
+ */
+function redirect_bulk_import_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the redirect_bulk_import module.
+    case 'help.page.redirect_bulk_import':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Custom module to handle bulk redirect import.') . '</p>';
+      return $output;
+
+  default:
+  }
+}
+
+function redirect_bulk_import_import($file) {
+  $new_redirects = _redirect_bulk_import_parse_data($file);
+  $count = 0;
+  $existing_redirects = array();
+  foreach($new_redirects as $redirect) {
+  	$result = _redirect_bulk_import_verify_data($redirect);
+  	if($result === TRUE) {
+  		$count++;
+  	}else {
+  		$existing_redirects[] = $result;
+  	}
+  }
+  return array('count' => $count, 'existing_redirects' => $existing_redirects);
+}
+
+function _redirect_bulk_import_verify_data($redirect) {
+	if($query_string = parse_url($redirect['source'], PHP_URL_QUERY)) {
+		parse_str($query_string, $query_string_array);
+		$serialize_query_string = serialize($query_string_array);
+		$path = substr($redirect['source'], 0, (strpos($redirect['source'], $query_string) - 1));
+	}else {
+		$serialize_query_string = 'N;';
+		$path = $redirect['source'];
+	}
+	$destination = 'internal:' . $redirect['destination'];
+	$query = _redirect_bulk_import_check_if_redirect_exist($path, $serialize_query_string, $destination);
+	$result = $query->fetchAssoc();
+	if(!$result) {
+		$redirect = Redirect::create(array(
+			'redirect_source' => array(
+				'path' => $path,
+				'query' => $serialize_query_string,
+			),
+			'redirect_redirect' => array(
+				'uri' => $destination,
+			),
+			'status_code' => $redirect['status'],
+		));
+		$redirect->save();
+		return TRUE;
+	}else {
+		return $result['rid'];
+	}
+}
+
+function _redirect_bulk_import_check_if_redirect_exist($path, $query_string, $destination) {
+	$query = db_query('SELECT * FROM redirect WHERE 
+							redirect_source__path = :redirect_source__path AND
+							redirect_source__query = :redirect_source__query AND
+						  redirect_redirect__uri = :redirect_redirect__uri', array(
+						  ':redirect_source__path' => $path,
+						  ':redirect_source__query' => $query_string,
+						  ':redirect_redirect__uri' => $destination,
+	));
+	return $query;
+}
+function _redirect_bulk_import_parse_data($file) {
+  $csv_uri = $file->get('uri')->value;
+  $csvf = fopen($csv_uri, 'r');
+  $columns = _redirect_bulk_import_get_columns(fgetcsv($csvf));
+  $records = _redirect_bulk_import_map_data($csvf, $columns);
+  fclose($csvf);
+  return $records;
+}
+
+function _redirect_bulk_import_get_columns($row) {
+  $columns = array();
+  foreach ($row as $i => $header) {
+    $columns[$i] = strtolower(trim($header));
+  }
+  return $columns;
+}
+
+function _redirect_bulk_import_map_data($csvf, $columns) {
+  $records = array();
+  while ($row = fgetcsv($csvf)) {
+    $record = array();
+    foreach ($row as $i => $field) {
+    	if($i == 0) {
+    		$record[$columns[$i]] = ltrim($field, '/');
+    	}else {
+    		$record[$columns[$i]] = $field;
+    	}
+    }
+    $records[] = $record;
+  }
+  return $records;
+}

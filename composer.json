@@ -1,0 +1,14 @@
+{
+  "name": "drupal/redirect_bulk_import",
+  "type": "drupal-module",
+  "description": "Custom module to handle bulk redirect import.",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/redirect_bulk_import",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "http://drupal.org/project/issues/redirect_bulk_import",
+    "source": "http://cgit.drupalcode.org/redirect_bulk_import"
+  },
+  "require": { }
+}
